@@ -31,11 +31,6 @@
         <?php endif; ?>
     </div>
 
-    <div class="form-group">
-        <label>Mô tả sản phẩm:</label>
-        <textarea name="description" rows="3"><?php echo isset($_POST['description']) ? htmlspecialchars($_POST['description']) : htmlspecialchars($product['description']); ?></textarea>
-    </div>
-
     <button type="submit" class="btn btn-green">Cập nhật sản phẩm</button>
     <a href="product_list.php" style="margin-left: 10px;">Hủy bỏ</a>
 </form>

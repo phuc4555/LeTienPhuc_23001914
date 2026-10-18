@@ -55,10 +55,10 @@ function updateProduct($id,$name,$price,$quantity) {
         die("Lỗi cập nhật sản phẩm: " . $e -> getMessage());
     }
 }
-function deleteProduct($id) {
+function deleteProductById($id) {
     global $pdo;
     try {
-        $sql = "DELETE FROM products WHERE id =: id";
+        $sql = "DELETE FROM products WHERE id = :id";
         $stmt = $pdo-> prepare($sql);
         return $stmt -> execute(['id' => $id]);
     } catch(PDOException $e) {

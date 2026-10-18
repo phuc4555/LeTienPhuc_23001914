@@ -28,7 +28,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $success_msg = "Thêm sản phẩm thành công!";
             header("refresh:1.5;url = product_list.php");
         } else {
-            $error['system'];
+            $error['system'] = "Lỗi hệ thống, vui lòng thử lại sau.";
         }
     }
 }
