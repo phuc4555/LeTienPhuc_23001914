@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bài 1: Quản Lý Sản Phẩm - Vue.js</title>
+    <!-- Nhúng Tailwind CSS để tối ưu giao diện trực quan -->
+    <script src="https://tailwindcss.com"></script>
+    <!-- Nhúng thư viện Vue 3 qua CDN (Bản chạy trực tiếp không cần cài đặt) -->
+    <script src="https://unpkg.com"></script>
+</head>
+<body class="bg-gray-50 py-8 px-4">
+
+    <div id="app" class="max-w-6xl mx-auto bg-white p-6 rounded-lg shadow-md">
+        
+        <!-- Tiêu đề trang & Trạng thái (Yêu cầu 10: mounted hook) -->
+        <div class="flex justify-between items-center mb-6 border-b pb-4">
+            <h1 class="text-2xl font-bold text-gray-800">Quản Lý Danh Sách Sản Phẩm</h1>
+            <span class="px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
+                Trạng thái: {{ appStatus }}
+            </span>
+        </div>
+
+        <!-- Khối chức năng Tìm kiếm, Lọc, Sắp xếp kết hợp (Yêu cầu 2, 3, 4, 5) -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 p-4 bg-gray-50 rounded-md">
+            <!-- Tìm kiếm theo tên (Yêu cầu 2) -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Tìm kiếm theo tên</label>
+                <input type="text" v-model="searchQuery" placeholder="Nhập tên sản phẩm..." 
+                       class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <!-- Thông báo kích hoạt bởi Watch (Yêu cầu 9) -->
+                <p v-if="watchMessage" class="text-amber-600 text-xs mt-1 font-medium">{{ watchMessage }}</p>
+            </div>
+            
+            <!-- Lọc theo danh mục (Yêu cầu 3) -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Lọc theo danh mục</label>
+                <select v-model="selectedCategory" class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">Tất cả danh mục</option>
+                    <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
+                </select>
+            </div>
+            
+            <!-- Sắp xếp theo giá (Yêu cầu 4) -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Sắp xếp theo giá</label>
+                <select v-model="sortByPrice" class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">Mặc định</option>
+                    <option value="asc">Giá tăng dần</option>
+                    <option value="desc">Giá giảm dần</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Khối thống kê bằng Computed (Yêu cầu 8) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div class="p-4 bg-blue-50 border border-blue-200 rounded-md">
+                <span class="text-sm text-blue-700 font-medium">Số lượng sản phẩm:</span>
+                <span class="text-xl font-bold text-blue-900 ml-2">{{ totalFilteredProducts }} / {{ products.length }}</span>
+            </div>
+            <div class="p-4 bg-emerald-50 border border-emerald-200 rounded-md">
+                <span class="text-sm text-emerald-700 font-medium">Tổng giá trị tồn kho (đang hiển thị):</span>
+                <span class="text-xl font-bold text-emerald-900 ml-2">{{ formatPrice(totalFilteredStockValue) }} đ</span>
+            </div>
+        </div>
+
+        <!-- Bảng hiển thị danh sách sản phẩm (Yêu cầu 1) -->
+        <div class="overflow-x-auto mb-8 border border-gray-200 rounded-lg">
+            <table class="w-full text-sm text-left text-gray-500">
+                <thead class="text-xs text-gray-700 uppercase bg-gray-100">
+                    <tr>
+                        <th class="px-4 py-3">ID</th>
+                        <th class="px-4 py-3">Tên sản phẩm</th>
+                        <th class="px-4 py-3">Danh mục</th>
+                        <th class="px-4 py-3 text-right">Giá bán</th>
+                        <th class="px-4 py-3 text-center">Số lượng</th>
+                        <th class="px-4 py-3 text-center">Trạng thái</th>
+                        <th class="px-4 py-3 text-center">Hành động</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Lặp hiển thị danh sách đã xử lý kết hợp qua computed -->
+                    <tr v-for="product in filteredProducts" :key="product.id" class="bg-white border-b hover:bg-gray-50">
+                        <td class="px-4 py-3 font-medium text-gray-900">#{{ product.id }}</td>
+                        <td class="px-4 py-3 text-gray-900 font-medium">{{ product.name }}</td>
+                        <td class="px-4 py-3">{{ product.category }}</td>
+                        <td class="px-4 py-3 text-right font-medium text-gray-950">{{ formatPrice(product.price) }} đ</td>
+                        <td class="px-4 py-3 text-center">{{ product.stock }}</td>
+                        <!-- Gắn nhãn trạng thái bằng màu sắc khác nhau (Yêu cầu 1) -->
+                        <td class="px-4 py-3 text-center">
+                            <span :class="product.stock > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'" 
+                                  class="text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">
+                                {{ product.stock > 0 ? 'Còn hàng' : 'Hết hàng' }}
+                            </span>
+                        </td>
+                        <!-- Nút xóa sản phẩm (Yêu cầu 7) -->
+                        <td class="px-4 py-3 text-center">
+                            <button @click="deleteProduct(product.id)" class="text-red-600 hover:text-red-900 font-medium text-xs border border-red-200 rounded px-2 py-1 bg-red-50 hover:bg-red-100 transition">
+                                Xóa
+                            </button>
+                        </td>
+                    </tr>
+                    <!-- Hiển thị khi không có sản phẩm nào khớp bộ lọc (Kết quả cần đạt) -->
+                    <tr v-if="filteredProducts.length === 0">
+                        <td colspan="7" class="px-4 py-8 text-center text-gray-400 font-medium">
+                            Không có sản phẩm nào phù hợp với bộ lọc hiện tại.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Form thêm sản phẩm mới (Yêu cầu 6) -->
+        <div class="border border-gray-200 p-6 rounded-lg bg-gray-50">
+            <h2 class="text-lg font-bold text-gray-800 mb-4">Thêm sản phẩm mới</h2>
+            
+            <form @submit.prevent="addProduct" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Tên sản phẩm</label>
+                    <input type="text" v-model="newProduct.name" placeholder="Ví dụ: iPhone 15 Pro"
+                           class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Danh mục</label>
+                    <select v-model="newProduct.category" class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                        <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Giá bán (đ)</label>
+                    <input type="number" v-model.number="newProduct.price" placeholder="Giá > 0"
+                           class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Số lượng tồn kho</label>
+                    <input type="number" v-model.number="newProduct.stock" placeholder="Số nguyên không âm"
+                           class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div class="md:col-span-2 lg:col-span-4 flex justify-end mt-2">
+                    <button type="submit" class="bg-blue-600 text-white font-semibold text-sm px-6 py-2 rounded shadow hover:bg-blue-700 transition">
+                        + Thêm vào hệ thống
+                    </button>
+                </div>
+            </form>
+        </div>
+
+    </div>
+
+    <!-- Cấu trúc logic Vue.js điều khiển trang -->
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    // Trạng thái ban đầu của trang (Yêu cầu 10)
+                    appStatus: "Đang khởi tạo...",
+                    
+                    // Danh mục cố định gồm 3 nhóm danh mục theo yêu cầu đề bài
+                    categories: ["Điện thoại", "Máy tính bảng", "Phụ kiện"],
+                    
+                    // Dữ liệu gốc khởi tạo ban đầu gồm 6 sản phẩm thuộc 3 danh mục
+                    products: [
+                        { id: 1, name: "iPhone 15 Pro Max", price: 30000000, category: "Điện thoại", stock: 15 },
+                        { id: 2, name: "Samsung Galaxy S24 Ultra", price: 27000000, category: "Điện thoại", stock: 8 },
+                        { id: 3, name: "iPad Pro M2", price: 22000000, category: "Máy tính bảng", stock: 5 },
+                        { id: 4, name: "Xiaomi Pad 6", price: 8500000, category: "Máy tính bảng", stock: 0 },
+                        { id: 5, name: "Tai nghe AirPods Pro 2", price: 5500000, category: "Phụ kiện", stock: 24 },
+                        { id: 6, name: "Sạc nhanh Anker 65W", price: 800000, category: "Phụ kiện", stock: 40 }
+                        ],
+                        // Các thuộc tính liên kết lưu trạng thái tìm kiếm và bộ lọc của người dùng
+                        searchQuery: "",
+                        selectedCategory: "",
+                        sortByPrice: "",
+                        // Chuỗi lưu thông báo độ dài ký tự của watcher (Yêu cầu 9)
+                        watchMessage: "",
+                        // Đối tượng tạm thời để lưu dữ liệu khi nhập form thêm mới
+                        newProduct: {
+                        name: "",
+                        category: "Điện thoại",
+                        price: null,
+                        stock: null
+                        }
+                        }
+                        },
+                        computed: {
+                        // Xử lý Tìm kiếm + Lọc danh mục + Sắp xếp kết hợp (Yêu cầu 2, 3, 4, 5)
+                        filteredProducts() {
+                        // Yêu cầu 4: Dùng toán tử spread [...] tạo bản sao mảng mới để không làm thay đổi mảng gốc khi dùng hàm .sort()
+                        let result = [...this.products];
+                        // 1. Thực hiện tìm kiếm theo tên - chuyển sang chữ thường (Yêu cầu 2)
+                        if (this.searchQuery.trim() !== "") {
+                        const searchLower = this.searchQuery.toLowerCase().trim();
+                        result = result.filter(p => p.name.toLowerCase().includes(searchLower));
+                        }
+                        // 2. Thực hiện bộ lọc danh mục sản phẩm (Yêu cầu 3)
+                        if (this.selectedCategory !== "") {
+                        result = result.filter(p => p.category === this.selectedCategory);
+                        }
+                        // 3. Thực hiện chức năng sắp xếp theo giá tăng/giảm dần (Yêu cầu 4)
+                        if (this.sortByPrice === "asc") {
+                        result.sort((a, b) => a.price - b.price);
+                        } else if (this.sortByPrice === "desc") {
+                        result.sort((a, b) => b.price - a.price);
+                        }
+                        return result;
+                        },
+                        // Yêu cầu 8: Đếm tổng số lượng sản phẩm đang hiển thị trên tổng số
+                        totalFilteredProducts() {
+                        return this.filteredProducts.length;
+                        },
+                        // Yêu cầu 8: Tính tổng giá trị tồn kho hiện hành dựa theo bộ lọc (Giá x Tồn kho)
+                        totalFilteredStockValue() {
+                        return this.filteredProducts.reduce((sum, item) => sum + (item.price * item.stock), 0);
+                        }
+                        },
+                        watch: {
+                        // Yêu cầu 9: Lắng nghe sự thay đổi của từ khóa tìm kiếm
+                        searchQuery(newValue) {
+                        const length = newValue.trim().length;
+                        if (length === 1) {
+                        this.watchMessage = "⚠️ Từ khóa quá ngắn. Hãy nhập thêm ký tự để tìm kiếm chính xác hơn.";
+                        } else {
+                        this.watchMessage = ""; // Tự động xóa thông báo khi chuỗi rỗng hoặc đạt từ 2 ký tự trở lên
+                        }
+                        }
+                        },
+                        methods: {
+                        // Yêu cầu 6: Xử lý sự kiện thêm sản phẩm mới và xác thực tính hợp lệ dữ liệu đầu vào
+                        addProduct() {
+                        const name = this.newProduct.name.trim();
+                        const price = this.newProduct.price;
+                        const stock = this.newProduct.stock;
+                        // Kiểm tra tên không được bỏ trống
+                        if (!name) {
+                        alert("Vui lòng nhập tên sản phẩm!");
+                        return;
+                        }
+                        // Kiểm tra đơn giá phải lớn hơn 0
+                        if (price === null || price <= 0) {
+                        alert("Giá sản phẩm phải lớn hơn 0!");
+                        return;
+                        }
+                        // Kiểm tra số lượng tồn kho phải là số nguyên không âm (>= 0)
+                        if (stock === null || !Number.isInteger(stock) || stock < 0) {
+                        alert("Số lượng tồn kho phải là một số nguyên từ 0 trở lên!");
+                        return;
+                        }
+                        // Tự động tìm ID lớn nhất để tăng tiến tiến trình tạo sản phẩm
+                        const maxId = this.products.reduce((max, p) => p.id > max ? p.id : max, 0);
+                        // Đẩy dữ liệu mới vào mảng sản phẩm gốc của hệ thống
+                        this.products.push({
+                        id: maxId + 1,
+                        name: name,
+                        price: price,
+                        category: this.newProduct.category,
+                        stock: stock
+                        });
+                        // Reset trắng lại các trường nhập liệu của form sau khi xử lý thành công
+                        this.newProduct.name = "";
+                        this.newProduct.price = null;
+                        this.newProduct.stock = null;
+                        alert("Thêm sản phẩm mới vào danh sách thành công!");
+                        },
+                        // Yêu cầu 7: Xử lý sự kiện xóa sản phẩm sau khi bật hộp thoại xác nhận
+                        deleteProduct(id) {
+                        const product = this.products.find(p => p.id === id);
+                        if (product) {
+                        const isConfirmed = confirm(`Bạn có chắc chắn muốn xóa sản phẩm "${product.name}" ra khỏi hệ thống không?`);
+                        if (isConfirmed) {
+                        this.products = this.products.filter(p => p.id !== id);
+                        }
+                        }
+                        },
+                        // Hàm định dạng hiển thị số tiền có phân tách dấu chấm hàng nghìn trực quan
+                        formatPrice(val) {
+                        if (val === undefined || val === null) return 0;
+                        return val.toLocaleString('vi-VN');
+                        }
+                        },
+                        // Yêu cầu 10: Vòng đời mounted thiết lập trạng thái ứng dụng thành Sẵn sàng
+                        mounted() {
+                        this.appStatus = "Sẵn sàng";
+                        console.log("Ứng dụng quản lý sản phẩm đã sẵn sàng hoạt động.");
+                        }
+        }).mount('#app');
+    </script>
+</body> 

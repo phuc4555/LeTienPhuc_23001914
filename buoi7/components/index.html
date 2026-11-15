@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> Danh Mục Sản Phẩm - Compenet Vue.js</title>
+    <script src="https://tailwindcss.com"></script>
+    <script src="https://unpkg.com"></script>
+</head>
+<body class=""bg-gray-100 py-10 px-4>
+    <div id="app" class="max-w-6xl mx-auto">
+        <h1 class="text-3xl font-extrabold text-gray-800 text-center mb-8 border-b pb-4">
+            Danh Mục Sản Phẩm Mới Nhất
+        </h1>
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <the-san-pham
+            v-for="item in products"
+            :key="item.id"
+            :name="item.name"
+            :price="item.price"
+            :image="item.image"
+            :desciption="item.description"
+            :stock="item.stock"></the-san-pham>
+        </div>
+    </div>
+    <script type="module">
+        import TheSanPham from '/compenents/TheSanPham.js';
+        const {createApp} = Vue;
+        createApp({
+            components:{
+                'the-san-pham': TheSanPham
+            },
+            data(){
+                return {
+                    products:[
+                        {
+                            id: 101,
+                            name: "Đồng Hồ Thông Minh Watch S4",
+                            price: 4500000,
+                            image: "https//unsplash.com",
+                            description: "Màn hình AMOLED sắc nét, thời lượng pin trâu lên tới 14 ngày sử dụng liên tục, hỗ trợ đo đo nhịp tim chuyên sâu.",
+                            stock:12
+                        },
+                        {
+                            id:102,
+                            name: "Tai Nghe Không Dây Max Sound",
+                            price: 2300000,
+                            image: "https://unsplash.com",
+                            description: "Công nghệ chống ồn chủ động ANC tiên tiến, chất âm trầm đầm ấm cực hay thích hợp với nhạc trẻ năng động.",
+                            stock:0
+                        },
+                        {
+                            id:103,
+                            name: "Bàn Phím Cơ Không Dây K87",
+                            price: 1850000,
+                            image: "https://unsplash.com",
+                            description: "Layout 87 phím gọn gàng, switch cơ học gõ êm ái đi kèm led RGB cá tính nhiều chế độ tùy biến.",
+                            stock:25
+                        },
+                        {
+                            id:104,
+                             name: "Chuột Gaming Không Dây Siêu Nhẹ", 
+                            price: 1200000, 
+                            // Không truyền ảnh và mô tả để test tính năng dữ liệu mặc định (Default props)
+                            stock: 5 
+                        }
+                    ]
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

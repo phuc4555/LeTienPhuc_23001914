@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bài 2: Danh Mục Sản Phẩm Component</title>
+    <!-- Nhúng thư viện Vue 3 từ máy chủ phân phối cdnjs siêu ổn định -->
+    <script src="https://cloudflare.com"></script>
+</head>
+<body style="background-color: #f3f4f6; font-family: system-ui, -apple-system, sans-serif; padding: 40px 20px; margin: 0;">
+
+    <div id="app" style="max-width: 1200px; margin: 0 auto;">
+        <h1 style="text-align: center; color: #111827; font-size: 28px; font-weight: 800; margin-bottom: 32px; border-bottom: 2px solid #e5e7eb; padding-bottom: 16px;">
+            Danh Mục Sản Phẩm Công Nghệ
+        </h1>
+
+        <!-- Lưới Layout hiển thị danh sách các Thẻ sản phẩm con -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 24px;">
+            
+            <!-- Yêu cầu 4: Truyền dữ liệu từ cha xuống con bằng cú pháp binding thuộc tính v-bind (viết tắt là :) -->
+            <the-san-pham 
+                v-for="item in products" 
+                :key="item.id"
+                :name="item.name"
+                :price="item.price"
+                :image="item.image"
+                :description="item.description"
+                :stock="item.stock">
+            </the-san-pham>
+            
+        </div>
+    </div>
+
+    <!-- Logic Script quản lý và đăng ký Component -->
+    <script type="module">
+        // Yêu cầu 8: Nạp (import) file component từ thư mục bên ngoài
+        import TheSanPham from './components/TheSanPham.js';
+
+        const { createApp } = Vue;
+
+        createApp({
+            // Yêu cầu 8: Khai báo đăng ký cục bộ component con vào ứng dụng cha trước khi mount
+            components: {
+                'the-san-pham': TheSanPham
+            },
+            data() {
+                return {
+                    // Yêu cầu 1: Thành phần cha quản lý danh sách ít nhất 4 sản phẩm
+                    products: [
+                        { 
+                            id: 1, 
+                            name: "Đồng Hồ Thông Minh S4", 
+                            price: 4500000, 
+                            image: "https://unsplash.com",
+                            description: "Màn hình tràn viền siêu nét, pin dùng liên tục lên đến 14 ngày, đo chỉ số sức khỏe thời gian thực.", 
+                            stock: 12 
+                        },
+                        { 
+                            id: 2, 
+                            name: "Tai Nghe Không Dây ANC", 
+                            price: 2300000, 
+                            image: "https://unsplash.com",
+                            description: "Công nghệ lọc tiếng ồn chủ động vượt trội, âm bass đầm ấm đem lại cảm giác âm thanh chân thực.", 
+                            stock: 0 // Hết hàng: Để kiểm tra nhãn "Hết hàng" và chức năng khóa nút Mua
+                        },
+                        { 
+                            id: 3, 
+                            name: "Bàn Phím Cơ Wireless", 
+                            price: 1850000, 
+                            image: "https://unsplash.com",
+                            description: "Sử dụng switch cơ học gõ êm ái, hệ thống đèn nền LED nhiều màu rực rỡ bắt mắt.", 
+                            stock: 25 
+                        },
+                        { 
+                            id: 4, 
+                            name: "Chuột Gaming Siêu Nhẹ", 
+                            price: 1200000, 
+                            // Không truyền thuộc tính image và description để kiểm tra tính năng sử dụng dữ liệu mặc định (Default Props của yêu cầu 3)
+                            stock: 6 
+                        }
+                    ]
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

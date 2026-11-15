@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="vi">
+    <head>
+        <meta charset="UTF-8">
+        <title>Thông tin Sinh viên - Vue 3 </title>
+        <!-- SỬA LỖI 1: Nhúng đúng đường dẫn thư viện Vue 3 -->
+        <script src="https://unpkg.com"></script>
+        <style>
+             body { font-family: Arial, sans-serif; background-color: #f4f4f9; padding: 20px; }
+            .card { background: white; max-width: 400px; margin: auto; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); text-align: center; }
+            .avatar { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid #ccc; margin-bottom: 15px; }
+            .status { font-weight: bold; margin: 10px 0; }
+            .status-active { color: green; }
+            .status-inactive { color: red; }
+            .rank { font-weight: bold; padding: 5px 10px; border-radius: 4px; display: inline-block; color: white; }
+            .bio-box { background: #f0f0f0; padding: 10px; margin-top: 15px; border-radius: 4px; text-align: left; font-size: 14px; }
+            button { background: #007bff; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; margin-top: 10px; }
+            button:hover { background: #0056b3; }
+        </style>
+    </head>
+    <body>
+        <div id="app">
+            <div class="card">
+                <img v-bind:src="sinhVien.anhDaiDien" v-bind:alt="sinhVien.hoTen" class="avatar">
+                <h2> {{sinhVien.hoTen}} </h2>
+                <p>Lớp: <span v-text="sinhVien.lop"></span></p>
+                <p>Mã số SV: {{sinhVien.maSV}}</p>
+                <p>Điểm trung bình: <strong> {{sinhVien.diemTB}} </strong></p>
+                <div>
+                    Xếp loại :
+                    <span class="rank" v-bind:style="{backgroundColor: mauXepLoai}">
+                        <span v-if="sinhVien.diemTB >=8">Giỏi</span>
+                        <!-- SỬA LỖI 2: Đổi sinhvien thành sinhVien -->
+                        <span v-else-if="sinhVien.diemTB >=6.5">Khá</span>
+                        <span v-else-if="sinhVien.diemTB >=5">Trung bình</span>
+                        <span v-else>Chưa đạt</span>
+                    </span>
+                </div>
+
+                <p class="status" v-bind:class="sinhVien.dangHoc ? 'status-active' : 'status-inactive'">
+                    Trạng thái: {{sinhVien.dangHoc ? 'Đang học' : 'Đã nghỉ'}}
+                </p>
+
+                <button v-on:click="hienThiGioiThieu = !hienThiGioiThieu">
+                    {{hienThiGioiThieu ? 'Ẩn':'Hiện'}} phần giới thiệu
+                </button>
+
+                <div v-show="hienThiGioiThieu" class="bio-box">
+                    <strong> Giới thiệu bản thân:</strong>
+                    <p>Xin chào! Mình là sinh viên lớp {{ sinhVien.lop}}. Rất vui được làm quen với các bạn!</p>
+                </div>
+            </div>
+        </div>
+        <script>
+            Vue.createApp({
+                data() {
+                    return {
+                        sinhVien: {
+                            maSV: "SV12345",
+                            hoTen: "Nguyễn Văn A",
+                            lop: "Công nghệ thông tin K15",
+                            // SỬA LỖI 3 & 4: Đổi anDaiDien thành anhDaiDien và thêm kích cỡ ảnh /200
+                            anhDaiDien: "https://picsum.photos",
+                            diemTB: 7.5,
+                            dangHoc: true
+                        },
+                        hienThiGioiThieu: false
+                    }
+                },
+                computed: {
+                    mauXepLoai() {
+                        const diem = this.sinhVien.diemTB;
+                        if (diem >=8) return '#28a745';
+                        if (diem >= 6.5) return '#ffc107';
+                        if (diem >= 5) return '#fd7e14';
+                        return '#dc3545';
+                    }
+                }
+            }).mount('#app')
+        </script>
+    </body>
+</html>
