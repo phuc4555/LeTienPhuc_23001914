@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Sản phẩm</title>
+    <link rel="stylesheet" href="bootstrap.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; }
+        .alert { padding: 10px; margin-bottom: 15px; border-radius: 4px; }
+        .alert-error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .alert-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .form-group { margin-bottom: 10px; }
+        label { display: inline-block; width: 120px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f4f4f4; }
+        button { cursor: pointer; padding: 5px 10px; margin-right: 5px; }
+    </style>
+</head>
+
+
+
+<body>
+<div id="app" class='container py-4'>
+    <h2 class="mb-4 text-primary">Quản lý Sản phẩm</h2>
+    <div v-if="alertMessage" :class="['alert', alertType === 'success' ? 'alert-success' : 'alert-danger']" role="alert">
+        {{ alertMessage }}
+    </div>
+
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white fw-bold">
+                    {{isEditing ? 'Cập nhật sản phẩm #' + form.id :  'Thêm sản phẩm mới'}}
+                </div>
+                <div class="card-body">
+                    <form @submit.prevent="handleSubmit">
+                        <div class="mb-3">
+                            <label class="form-label">Tên sản phẩm <span class="text-danger">*</span></label>
+                            <input type="text" v-model="form.name" class="form-control" required :disabled="uploadRetryMode">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Giá (VNĐ) <span class="text-danger">*</span></label>
+                            <input type="number" v-model.number="form.price" class="form-control" min="0" required :disabled="uploadRetryMode">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Tồn kho (Stock) <span class="text-danger">*</span></label>
+                            <input type="number" v-model.number="form.stock" class="form-control" min="0" step="1" required :disabled="uploadRetryMode">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Ảnh sản phẩm (JPG, JPEG, PNG - Tối đa 2MB)</label>
+                            <input type="file" ref="fileInput" @change="handleFileChange" accept=".jpg,.jpeg,.png,image/jpeg,image/png" class="form-control">
+                            <div v-if="fileError" class="text-danger small mt-1">{{ fileError }}</div>
+                            
+                            <!-- Khung xem trước -->
+                            <div v-if="previewUrl" class="mt-2">
+                                <div class="small text-muted mb-1">Xem trước ảnh:</div>
+                                <img :src="previewUrl" alt="Preview" class="preview-img">
+                            </div>
+                        </div>
+
+                        <div v-if="uploadError" class="alert alert-warning p-2 small">
+                            <div><strong>Lỗi upload ảnh:</strong> {{ uploadError }}</div>
+                            <div class="mt-1">Thông tin sản phẩm đã được lưu. Bạn có thể chọn lại ảnh hoặc bấm thử lại.</div>
+                            <button type="button" @click="retryUpload" class="btn btn-sm btn-warning mt-2" :disabled="isSubmitting">
+                                Thử lại upload ảnh
+                            </button>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button v-if="!uploadRetryMode" type="submit" class="btn btn-primary w-100" :disabled="isSubmitting || !!fileError">
+                                {{ isSubmitting ? 'Đang xử lý...' : (isEditing ? 'Lưu thay đổi' : 'Thêm sản phẩm') }}
+                            </button>
+                            <button v-if="isEditing || uploadRetryMode" type="button" @click="resetForm" class="btn btn-secondary">
+                                Hủy / Xong
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Ảnh</th>
+                                    <th>Tên sản phẩm</th>
+                                    <th>Giá</th>
+                                    <th>Tồn kho</th>
+                                    <th class="text-end">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-if="products.length === 0">
+                                    <td colspan="6" class="text-center py-4 text-muted">Chưa có sản phẩm</td>
+                                </tr>
+                                <tr v-for="item in products" :key="item.id">
+                                    <td>#{{ item.id }}</td>
+                                    <td>
+                                        <img v-if="item.image" :src="item.image" alt="Ảnh SP" class="thumb-img">
+                                        <span v-else class="badge bg-secondary fw-normal">Chưa có ảnh</span>
+                                    </td>
+                                    <td class="fw-medium">{{ item.name }}</td>
+                                    <td>{{ formatPrice(item.price) }} đ</td>
+                                    <td>{{ item.stock }}</td>
+                                    <td class="text-end text-nowrap">
+                                        <button @click="editProduct(item)" class="btn btn-sm btn-outline-primary me-1">Sửa</button>
+                                        <button @click="deleteProduct(item.id)" class="btn btn-sm btn-outline-danger">Xóa</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+
+                <div class="card-footer bg-white d-flex justify-content-between align-items-center">
+                    <span class="text-muted small">
+                        Trang {{ pagination.page }} / {{ pagination.total_pages }} — Tổng {{ pagination.total }} sản phẩm
+                    </span>
+                    <div class="btn-group">
+                        <button 
+                            class="btn btn-sm btn-outline-secondary" 
+                            :disabled="pagination.page <= 1"
+                            @click="changePage(pagination.page - 1)">
+                            Trước
+                        </button>
+                        <button 
+                            class="btn btn-sm btn-outline-secondary" 
+                            :disabled="pagination.page >= pagination.total_pages"
+                            @click="changePage(pagination.page + 1)">
+                            Sau
+                        </button>
+                    </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+<script>
+const { createApp } = Vue;
+
+createApp({
+    data() {
+        return {
+            products: [],
+            pagination: {
+                page: 1,
+                limit: 5,
+                total: 0,
+                total_pages: 1
+            },
+            form: {
+                id: null,
+                name: '',
+                price: 0,
+                stock: 0,
+                currentImage: null
+            },
+            selectedFile: null,
+            previewUrl: null,
+            fileError: '',
+            uploadError: '',
+            uploadRetryMode: false,
+            savedProductId: null,
+            isEditing: false,
+            isSubmitting: false,
+            alertMessage: '',
+            alertType: 'success'
+        };
+    },
+    mounted() {
+        this.fetchProducts(1);
+    },
+    methods: {
+        async fetchProducts(page = 1) {
+            try {
+                const res = await fetch(`api/products.php?page=${page}&limit=${this.pagination.limit}`);
+                const result = await res.json();
+                if (result.success) {
+                    this.products = result.data;
+                    this.pagination = {
+                    ...result.pagination,
+                    page: Number(result.pagination.page),
+                    limit: Number(result.pagination.limit),
+                    total_pages: Number(result.pagination.total_pages)
+                    };
+                } else {
+                    this.showAlert(result.message, 'danger');
+                }
+            } catch (err) {
+                console.error("Chi tiết lỗi:", err);
+                this.showAlert('Lỗi kết nối máy chủ khi tải danh sách.', 'danger');
+            }
+        },
+
+        changePage(newPage) {
+            if (newPage >= 1 && newPage <= this.pagination.total_pages) {
+                this.fetchProducts(newPage);
+            }
+        },
+
+        handleFileChange(event) {
+            this.fileError = '';
+            const file = event.target.files[0];
+
+            if (!file) {
+                this.selectedFile = null;
+                this.previewUrl = this.isEditing ? this.form.currentImage : null;
+                return;
+            }
+
+            const allowedTypes = ['image/jpeg', 'image/png','image/jpg'];
+            const maxSize = 2 * 1024 * 1024; // 2MB
+
+            if (!allowedTypes.includes(file.type)) {
+                this.fileError = 'Chỉ chấp nhận định dạng JPG, JPEG hoặc PNG.';
+                this.selectedFile = null;
+                event.target.value = '';
+                return;
+            }
+
+            if (file.size > maxSize) {
+                this.fileError = 'Dung lượng ảnh không được vượt quá 2 MB.';
+                this.selectedFile = null;
+                event.target.value = '';
+                return;
+            }
+
+            this.selectedFile = file;
+            this.previewUrl = URL.createObjectURL(file);
+        },
+
+        async handleSubmit() {
+            if (this.fileError) return;
+            this.isSubmitting = true;
+            this.uploadError = '';
+            try {
+            const method = this.isEditing ? 'PUT' : 'POST';
+            const payload = {
+            id: this.form.id,
+            name: this.form.name,
+            price: this.form.price,
+            stock: this.form.stock
+            };
+            
+            const res = await fetch('api/products.php', {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+            });
+            const result = await res.json();
+            if (!result.success) {
+            this.showAlert(result.message, 'danger');
+            this.isSubmitting = false;
+            return;
+            }
+            
+            
+            const targetProductId = result.id;
+            const targetPage = this.isEditing ? this.pagination.page : 1;
+                
+            if (this.selectedFile) {
+            const uploadOk = await this.uploadImage(targetProductId);
+            if (!uploadOk) {
+            this.savedProductId = targetProductId;
+            this.uploadRetryMode = true;
+            this.isSubmitting = false;
+            await this.fetchProducts(targetPage);
+            return;
+            }
+            }
+
+            this.showAlert(this.isEditing ? 'Cập nhật sản phẩm thành công!' : 'Thêm sản phẩm thành công!', 'success');
+            this.resetForm();
+            await this.fetchProducts(targetPage);
+            } catch (err) {
+            this.showAlert('Có lỗi xảy ra trong quá trình lưu dữ liệu.', 'danger');
+            } finally {
+            this.isSubmitting = false;
+            }
+        },
+        async uploadImage(productId) {
+            if (!this.selectedFile) {
+            this.uploadError = 'Vui lòng chọn một file ảnh hợp lệ để thử lại.';
+            return false;
+            }
+            const formData = new FormData();
+            formData.append('product_id', productId);
+            formData.append('image', this.selectedFile);
+            try {
+            const res = await fetch('api/upload.php', {
+            method: 'POST',
+            body: formData
+            });
+            const result = await res.json();
+            if (!result.success) {
+            this.uploadError = result.message;
+            return false;
+            }
+            return true;
+            } catch (err) {
+            this.uploadError = 'Mất kết nối máy chủ khi tải ảnh lên.';
+            return false;
+            }
+        },
+        async retryUpload() {
+            if (!this.savedProductId) return;
+            this.isSubmitting = true;
+            this.uploadError = '';
+            const uploadOk = await this.uploadImage(this.savedProductId);
+            this.isSubmitting = false;
+            if (uploadOk) {
+            const targetPage = this.isEditing ? this.pagination.page : 1;
+            this.showAlert('Upload ảnh thành công!', 'success');
+            this.resetForm();
+            await this.fetchProducts(targetPage);
+            }
+        },
+
+        editProduct(item) {
+            this.resetForm();
+            this.isEditing = true;
+            this.form = {
+            id: item.id,
+            name: item.name,
+            price: item.price,
+            stock: item.stock,
+            currentImage: item.image
+            };
+            this.previewUrl = item.image || null;
+        },
+        async deleteProduct(id) {
+            if (!confirm('Bạn có chắc chắn muốn xóa sản phẩm này?')) return;
+            try {
+            const res = await fetch(`api/products.php?id=${id}`, { method: 'DELETE' });
+            const result = await res.json();
+            if (result.success) {
+            this.showAlert(result.message, 'success');
+            if (this.form.id === id) this.resetForm();
+            await this.fetchProducts(this.pagination.page);
+            } else {
+            this.showAlert(result.message, 'danger');
+            }
+            } catch (err) {
+            this.showAlert('Lỗi khi xóa sản phẩm.', 'danger');
+            }
+            },
+        resetForm() {
+            this.form = { id: null, name: '', price: 0, stock: 0, currentImage: null };
+            this.selectedFile = null;
+            this.previewUrl = null;
+            this.fileError = '';
+            this.uploadError = '';
+            this.uploadRetryMode = false;
+            this.savedProductId = null;
+            this.isEditing = false;
+            if (this.$refs.fileInput) {
+                this.$refs.fileInput.value = '';
+            }
+        },
+        showAlert(msg, type) {
+            this.alertMessage = msg;
+            this.alertType = type;
+            setTimeout(() => { this.alertMessage = ''; }, 4000);
+        },
+        formatPrice(val) {
+            return new Intl.NumberFormat('vi-VN').format(val);
+        }
+    }
+}).mount('#app');
+
+</script>
+</body>
+</html>
